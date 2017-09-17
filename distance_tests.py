@@ -34,7 +34,7 @@ def split_clusters(objs, clusters_number, centers, k):
 
 def generate_centers(objs, clusters_number, k, method='kmeans++'):
     if method == 'random':
-        return random.sample(objs, clusters_number)
+        return random.sample(list(objs), clusters_number)
     elif method == 'kmeans++':
         init_center = random.choice(objs)
         # init_distances = list(map(lambda obj: lk_norm(obj, init_center, k), objs))
