@@ -1,6 +1,11 @@
+import random
 from math import sqrt
 import numpy as np
 import re
+
+from sklearn import metrics
+from sklearn.metrics.cluster import  adjusted_mutual_info_score
+
 
 def eucl_dist(a, b):
     s = 0
@@ -76,6 +81,14 @@ class Cluster:
         self.D = -1
         self.neighbors = []
 
+    def write(self, f):
+        pass
+        #f.write(" ".join(("Cluster",str(self.n),"\n")))
+
+        #for i in self.elements:
+            #f.write(" ".join((str(i),"\n")))
+
+        #f.write(" ".join(("Center -", str(self.f_m), "\n\n")))
 
     def update_parametrs(self, x):
         self.elements.append(x)
@@ -92,9 +105,10 @@ class Cluster:
                 s += distance(self.elements[i], self.elements[j],lambda_a, lambda_m)**2
 
         q = sqrt(s/(self.s**2))
+        #q = sqrt(round(2*(self.x_m - norm(self.f_m)**2) + (1- norm(self.f_a)**2), 6))
         print("Cluster N",self.n-1, "q =",q)
         return q
-        #return 2*(self.x_m - norm(self.f_m)**2) + (1- norm(self.f_a)**2)
+
 
     def calculate_d(self, clusters, lambda_a, lambda_m):
 
@@ -123,6 +137,7 @@ def new_k_means(data):
     labels = []
     #stage 1
     #global
+    #f.write("START stage 1\n")
     k = 1
     C = 1
     mu_m = data[0,:]
@@ -133,16 +148,21 @@ def new_k_means(data):
     lambda_a = 0
     lambda_m = 0
 
-    #print(k,C,mu_m, x_m, mu_a, x_a)
+    #f.write(' '.join((str(k),str(C),str(mu_m), str(x_m), str(mu_a), str(x_a),"\n")))
 
     clusters = []
     n = data.shape[0]
     #n = 100
+    #f.write("\n\nSTART stage 2\n")
     for index in range(n):
+
+        #plt.scatter(data[1:,0], data[1:,1])
+        #f.write("\nADD NEW POINT\n\n")
         print("Index ",index,"/",n)
         x = data[index, :]
         if len(clusters) == 0:
             clusters.append(Cluster(x,1))
+            #f.write(' '.join(("Point",str(x),"added to new cluster 1","\n")))
         else:
             #stage 2
             mu_m = k/(k+1)*mu_m + 1/(k+1)*x
@@ -150,6 +170,7 @@ def new_k_means(data):
             mu_a =  k/(k+1)*mu_a + 1/(k+1)*x/norm(x)
             k = k + 1
 
+            #f.write(' '.join(("Global center is changed to", str(mu_m),"\n")))
             #MAIN
 
             lambda_a = 1/sqrt(1-norm(mu_a)**2)
@@ -163,9 +184,17 @@ def new_k_means(data):
                 find_min.append(distance(clusters[i].f_m, mu_m, lambda_a, lambda_m))
 
             d = distance(x, mu_m, lambda_a, lambda_m)
+            #f.write("IF\n")
+            #f.write(" ".join(("max between center of clusters and global center =",str(max(find_max)),"\n")))
+            #f.write(" ".join(("min between center of clusters and global center =",str(min(find_min)),"\n")))
+            #f.write(" ".join(("distance between point and global center =",str(d),"\n")))
             if d > max(find_max) or d < min(find_min): # new cluster
                 clusters.append(Cluster(x, C+1))
                 C += 1
+
+
+
+                #f.write(' '.join(("Point",str(x),"added to new cluster", str(C),"\n")))
 
             else: #add it to nearest center
 
@@ -178,8 +207,18 @@ def new_k_means(data):
 
                 clusters[nearest_center].update_parametrs(x)
 
+                #f.write(' '.join(("Point",str(x),"added to cluster", str(nearest_center+1), "\n")))
+                #f.write(' '.join(("Center of cluster",str(nearest_center+1), "is changed to", str(clusters[nearest_center].f_m),"\n")))
+
+
 
     print("Number of clusters = ", C)
+    # w = open("clusters.txt",'w')
+    # for i in range(C):
+    #     clusters[i].write(w)
+    # w.close()
+    #f.write(" ".join(("Number of clusters =", str(C),"\n")))
+    #f.write("\n\nSTART stage 3\n")
     lambda_a = 1/sqrt(1-norm(mu_a)**2)
     lambda_m = 1/sqrt(2*(x_m - norm(mu_m)**2))
     #stage 3
@@ -187,26 +226,27 @@ def new_k_means(data):
     constanta = 0
     count = 0
 
-    for i in range(C):
-        t = clusters[i].calculate_q(lambda_a, lambda_m)
-        constanta += t
-
-    constanta = constanta/C
-
-    # constanta = 0
-    # for i in range(C-1):
-    #     for j in range(i+1, C):
-    #         constanta += distance(clusters[i].f_m, clusters[j].f_m, lambda_a, lambda_m)**2
+    # for i in range(C):
+    #     t = clusters[i].calculate_q(lambda_a, lambda_m)    #статья
+    #     constanta += t
     #
-    # constanta = sqrt(constanta)/C
+    # constanta = constanta/C
+
+    constanta = 0
+    for i in range(C-1):              #среднее квадр расстояние между центрами кластеров
+        for j in range(i+1, C):
+            constanta += distance(clusters[i].f_m, clusters[j].f_m, lambda_a, lambda_m)**2
+
+    constanta = sqrt(constanta)/C
 
     print("Constanta = ", constanta)
 
     for i in range(C):
         for j in range(C):
+            #print(distance(clusters[i].f_m, clusters[j].f_m, lambda_a, lambda_m))
             if i != j:
-                if i < j:
-                    print("Distance between ", i, " and ", j, " = ", distance(clusters[i].f_m, clusters[j].f_m, lambda_a, lambda_m))
+                print("Distance between ", i, " and ", j, " = ", distance(clusters[i].f_m, clusters[j].f_m, lambda_a, lambda_m))
+
                 if distance(clusters[i].f_m, clusters[j].f_m, lambda_a, lambda_m) < constanta:
                     clusters[i].neighbors.append(j)
 
@@ -227,11 +267,12 @@ def new_k_means(data):
                 max_d = clusters[clusters[i].neighbors[j]].D
 
         if clusters[i].D > max_d:
-            print("i = ",i, "max_d = ", max_d)
+            print("i = ",i, "D = ", clusters[i].D)
             local_max_f.append(clusters[i].f_m)
 
 
     print("Number of clusters = ", len(local_max_f))
+    w = open("final_clusters.txt", 'w')
     for index in range(n):
 
         x = data[index, :]
@@ -241,16 +282,21 @@ def new_k_means(data):
                 nearest_center = i
 
         labels.append(nearest_center)
+        w.write(" ".join((str(x),str(nearest_center), "\n")))
+
+    w.close()
+
 
     return labels
 
-f = open("a1.txt", 'r')
+f = open("datasets/dim256.txt", 'r')
 lines = f.readlines()
 f.close()
 
 p = re.compile(r"\d+")
 n = len(lines)
 m = len(p.findall(lines[0]))
+print(n,m)
 data = np.zeros((n,m), dtype=np.int64)
 
 for i in range(n):
@@ -258,7 +304,24 @@ for i in range(n):
     for j in range(m):
         data[i,j] = int(x[j])
 
-#from sklearn import preprocessing
-# normalize the data attributes
-#data = preprocessing.normalize(data)
-print(new_k_means(data))
+
+# fig = plt.figure()
+# plt.plot(data[:200,0], data[:200,1], 'o')
+# plt.savefig('data.png', fmt='png')
+#plt.show()
+f = open("debug.log", 'w')
+labels = new_k_means(data[:100,:])
+print(labels)
+f.close()
+
+f = open("datasets/dim256.pa",'r')
+true_labels = [int(x) for x in f.readlines()]
+print(true_labels )
+f.close()
+
+print(adjusted_mutual_info_score(true_labels[:100], labels))
+
+
+
+
+
