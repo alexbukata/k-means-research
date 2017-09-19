@@ -1,13 +1,13 @@
 import random
 
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import silhouette_samples
-import matplotlib.pyplot as plt
 
 
 def generateClusters(number, features):
     numberOfElements = number * features
-    cluster1 = np.random.uniform(-50000000, 0, numberOfElements * 6).reshape((-1, features))
+    cluster1 = np.random.uniform(-50000000, 0, numberOfElements).reshape((-1, features))
     cluster2 = np.random.uniform(10000000, 60000000, numberOfElements).reshape((-1, features))
     cluster3 = np.random.uniform(100000000, 150000000, numberOfElements).reshape((-1, features))
     cluster4 = np.random.uniform(170000000, 200000000, numberOfElements).reshape((-1, features))
@@ -16,6 +16,15 @@ def generateClusters(number, features):
 
     return np.concatenate((cluster1, cluster2, cluster3, cluster4, cluster5, cluster6))
     # return cluster1
+
+
+def generate_clusters_from_file(filename):
+    cluster = []
+    with open(filename) as f:
+        for line in f:
+            cluster.append([int(l_str) for l_str in line.split()])
+
+    return cluster
 
 
 def lk_norm(x, y, k):
@@ -75,7 +84,7 @@ def kmeans(objs, clusters_number, k, centers=None):
     return centers, clusters, obj_distrib
 
 
-def do_test(objs, elems_number, features, k):
+def do_test(objs, features, clusters_number, k, centers=None):
     def compute_error(clusters, centres):
         error = 0
         for index, result_center in enumerate(centres):
@@ -93,38 +102,34 @@ def do_test(objs, elems_number, features, k):
     #       str(sk_error) + ". Calinski&Harabaz score: " + str(sk_metric))
 
     errors = []
-    for i in range(1):
-        result_centers, result_clusters, obj_distrib = kmeans(objs, 6, k)
+    quals = []
+    for i in range(5):
+        result_centers, result_clusters, obj_distrib = kmeans(objs, clusters_number, k, centers=centers)
         errors.append(compute_error(result_clusters, result_centers))
-    # metric = metrics.calinski_harabaz_score(objs, obj_distrib)
-
-    # correct_distr = 0
-    # for i in range(0, len(result_clusters)):
-    #     for j in range(0, elems_number):
-    #         if obj_distrib[i * 100 + j] == i:
-    #             correct_distr += 1
-
-    qual = silhouette_samples(objs, obj_distrib)
-
+        quals.append(silhouette_samples(objs, np.array(obj_distrib)))
 
     # print("k-value:" + str(k) + ". Features: " + str(features) + ". Error: " + str(error)
     #       + ". Calinski&Harabaz score: " + str(metric))
 
-    colors = ["r", "b", "g", "y", "c", "m"]
+    cmap = plt.get_cmap('viridis')
+    colors = cmap(np.linspace(0, 1, len(result_clusters)))
     for i, clust in enumerate(result_clusters):
-        plt.plot(np.array(clust)[:, :1], np.array(clust)[:,1:2], colors[i] + "+")
-
-    plt.show()
-    print("k-value:" + str(k) + ". Features: " + str(features) + ". Error: " + str(np.mean(errors)) + ". Accuracy: " + str(np.mean(qual)))
+        plt.plot(np.array(clust)[:, 1:2], np.array(clust)[:, 2:3], c=colors[i], marker="+", linestyle="None")
+    #
+    # plt.show()
+    print("k-value:" + str(k) + ". Features: " + str(features) + ". Error: " + str(np.median(errors)) + ". Accuracy: " + str(np.median(quals)))
 
 
 if __name__ == '__main__':
     # for i in range(15, 20):
     # do_test(700, 20, 0.3)
-    objs = generateClusters(500, 20)
-    do_test(objs, 500, 20, 0.3)
-    do_test(objs, 500, 20, 0.5)
-    do_test(objs, 500, 20, 1)
-    do_test(objs, 500, 20, 2)
-    do_test(objs, 500, 20, 3)
+    features = 20
+    clusters_number = 16
+    objs = generate_clusters_from_file('dim032.txt')
+    centers = generate_centers(objs, clusters_number, 0.3)
+    do_test(objs, features, clusters_number, 0.3, centers=centers)
+    do_test(objs, features, clusters_number, 0.5, centers=centers)
+    do_test(objs, features, clusters_number, 1, centers=centers)
+    do_test(objs, features, clusters_number, 2, centers=centers)
+    do_test(objs, features, clusters_number, 3, centers=centers)
     print()
