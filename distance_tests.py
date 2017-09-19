@@ -1,8 +1,6 @@
 import random
 
 import numpy as np
-from scipy.spatial.distance import euclidean
-from sklearn import metrics
 
 
 def generateClusters(number, features):
@@ -47,7 +45,7 @@ def generate_centers(objs, clusters_number, k, method='kmeans++'):
         return centers
 
 
-def kmeans(objs, clusters_number, k, centers=None):
+def kmeans(objs, clusters_number, k, centers=None, max_iter=50):
     if centers is None:
         # avoid the situation when any cluster is empty
         while True:
@@ -60,8 +58,8 @@ def kmeans(objs, clusters_number, k, centers=None):
                 break
     else:
         clusters, obj_distrib = split_clusters(objs, clusters_number, centers, k)
-
-    while True:
+    iter = 0
+    while iter < max_iter:
         # cluster and centers are already initialized
         print("improving centers")
         new_centers = [np.mean(cluster, axis=0) for cluster in clusters]
@@ -70,6 +68,8 @@ def kmeans(objs, clusters_number, k, centers=None):
             return centers, clusters, obj_distrib
         centers = new_centers
         clusters, obj_distrib = split_clusters(objs, clusters_number, centers, k)
+        iter += 1
+    return centers, clusters, obj_distrib
 
 
 def do_test(elems_number, features, k):
@@ -78,7 +78,7 @@ def do_test(elems_number, features, k):
         for index, result_center in enumerate(centres):
             # print(result_center)
             for obj in clusters[index]:
-                error += euclidean(obj, result_center)
+                error += np.sum((obj - result_center) ** 2)
 
         return error
 
@@ -93,10 +93,8 @@ def do_test(elems_number, features, k):
 
     result_centers, result_clusters, obj_distrib = kmeans(objs, 6, k)
     error = compute_error(result_clusters, result_centers)
-    metric = metrics.calinski_harabaz_score(objs, obj_distrib)
-    print("k-value:" + str(k) + ". Features: " + str(features) + ". Error: " + str(error)
-          + ". Calinski&Harabaz score: " + str(metric))
-
+    # metric = metrics.calinski_harabaz_score(objs, obj_distrib)
+    print("k-value:" + str(k) + ". Features: " + str(features) + ". Error: " + str(error))
 
 if __name__ == '__main__':
     # for i in range(15, 20):
