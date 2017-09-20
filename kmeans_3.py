@@ -1,10 +1,8 @@
-import random
-from math import sqrt
-import numpy as np
 import re
+from math import sqrt
 
-from sklearn import metrics
-from sklearn.metrics.cluster import  adjusted_mutual_info_score
+import numpy as np
+from sklearn.metrics.cluster import adjusted_mutual_info_score
 
 
 def eucl_dist(a, b):
